@@ -10,6 +10,7 @@ export interface MapAttr {
   file: string;
   image: string;
   name: string;
+  players: number;
   size: number;
   version: string;
   views: number;
@@ -20,6 +21,7 @@ class MapModel extends Model<MapAttr> {
     'author',
     'image',
     'name',
+    'players',
     'size',
     'version',
   ];
@@ -29,7 +31,8 @@ class MapModel extends Model<MapAttr> {
   public downloads!: number;
   public file!: string;
   public image!: number;
-  public name!: Sequelize.StringDataType;
+  public name!: string;
+  public players!: number;
   public size!: number;
   public version!: string;
   public views!: number;
@@ -73,6 +76,10 @@ MapModel.init(
     },
     image: {
       type: Sequelize.STRING,
+      allowNull: false,
+    },
+    players: {
+      type: Sequelize.INTEGER,
       allowNull: false,
     },
     views: {

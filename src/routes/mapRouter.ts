@@ -2,6 +2,8 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import MapModel, { MapAttr } from '../models/Map';
 import { objectReduceMissingKeys, genericAPIError } from '../utils';
+import sequelize from '../sequelize';
+import log from '../log';
 
 const MapRouter = express.Router();
 
@@ -13,21 +15,39 @@ MapRouter.get('/', (_req, res) => {
   });
 });
 
-MapRouter.put('/', async (req, res) => {
-  const params: Partial<MapAttr> = req.body;
-  const missingParams = objectReduceMissingKeys(params, MapModel.requiredKeys);
-  if (missingParams.length) {
-    return genericAPIError(
-      res,
-      422,
-      `Missing: ${missingParams.reduce(
-        (acc, val) => (acc.length ? `${acc}, ${val}` : val),
-        ''
-      )}`
+MapRouter.put('/', async (req, res, next) => {
+  const bodyParams: Partial<MapAttr> = req.body;
+  const paramsArr: Partial<MapAttr>[] = Array.isArray(bodyParams)
+    ? bodyParams
+    : [bodyParams];
+  const transaction = await sequelize.transaction({ autocommit: false });
+  try {
+    const missingParams = paramsArr.reduce(
+      (acc: string[], params) =>
+        acc.concat(objectReduceMissingKeys(params, MapModel.requiredKeys)),
+      []
     );
+
+    if (missingParams.length) {
+      await transaction.rollback();
+      return genericAPIError(
+        res,
+        422,
+        `Missing: ${missingParams.reduce(
+          (acc, val) => (acc.length ? `${acc}, ${val}` : val),
+          ''
+        )}`
+      );
+    }
+
+    var insertedMaps = await MapModel.bulkCreate(paramsArr, { transaction });
+    await transaction.commit();
+    return res.json(insertedMaps);
+  } catch (e) {
+    log.error('ERROR', e);
+    await transaction.rollback();
+    return next();
   }
-  var insertedMap = await MapModel.create(params);
-  res.json(insertedMap);
 });
 
 MapRouter.delete('/:id', async (req, res) => {
