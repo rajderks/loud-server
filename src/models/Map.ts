@@ -14,6 +14,7 @@ export interface MapAttr {
   size: number;
   version: string;
   views: number;
+  token: string;
 }
 
 class MapModel extends Model<MapAttr> {
@@ -32,10 +33,12 @@ class MapModel extends Model<MapAttr> {
   public file!: string;
   public image!: number;
   public name!: string;
+  public official!: number;
   public players!: number;
   public size!: number;
   public version!: string;
   public views!: number;
+  public token!: string;
 
   // timestamps!
   public readonly createdAt!: Date;
@@ -78,6 +81,10 @@ MapModel.init(
       type: Sequelize.STRING,
       allowNull: false,
     },
+    official: {
+      type: Sequelize.BOOLEAN,
+      defaultValue: 0,
+    },
     players: {
       type: Sequelize.INTEGER,
       allowNull: false,
@@ -88,6 +95,10 @@ MapModel.init(
     },
     version: {
       type: Sequelize.CHAR(10),
+      allowNull: false,
+    },
+    token: {
+      type: Sequelize.STRING,
       allowNull: false,
     },
   },
