@@ -33,7 +33,11 @@ const genericAPIError = (res: Response, status: number, message: string) => {
 };
 
 const mapPath = (token: string) =>
-  path.normalize(path.resolve(`${rootPath}/`, process.env.MAP_ROOT_DEV, token));
+  process.env.NODE_ENV === 'production'
+    ? path.join(process.env.MAP_ROOT, '/', token)
+    : path.normalize(
+        path.resolve(`${rootPath}/`, process.env.MAP_ROOT_DEV, token)
+      );
 
 const mapWrite = (file: File, image: File, token: string) => {
   const filePath = path.normalize(path.join(mapPath(token), file.originalname));
@@ -43,7 +47,10 @@ const mapWrite = (file: File, image: File, token: string) => {
   fs.mkdirSync(mapPath(token), { recursive: true });
   fs.writeFileSync(filePath, file.buffer);
   fs.writeFileSync(imagePath, image.buffer);
-  return { filePath, imagePath };
+  return {
+    filePath: `maps/${token}/${file.originalname}`,
+    imagePath: `maps/${token}/${image.originalname}`,
+  };
 };
 
 export { genericAPIError, objectReduceMissingKeys, mapPath, mapWrite };
