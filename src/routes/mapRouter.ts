@@ -1,10 +1,21 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import MapModel, { MapAttr } from '../models/Map';
-import { objectReduceMissingKeys, genericAPIError } from '../utils';
+import {
+  objectReduceMissingKeys,
+  genericAPIError,
+  mapPath,
+  mapWrite,
+} from '../utils';
 import sequelize from '../sequelize';
 import log from '../log';
 import multer from 'multer';
+import fs from 'fs';
+import path from 'path';
+import { File } from '../types';
+import { uuid } from 'uuidv4';
+import { path as rootPath } from 'app-root-path';
+import { title } from 'process';
 
 const MapRouter = express.Router();
 const upload = multer();
@@ -35,31 +46,67 @@ MapRouter.post(
     const transaction = await sequelize.transaction({ autocommit: false });
     try {
       // @ts-ignore
-      console.warn('image found', req.files['image'][0]);
-      // @ts-ignore
-      console.warn('file found', req.files['file'][0]);
-      console.warn('body found', JSON.stringify(req.body, null, 2));
+      // console.warn('image found', req.files['image'][0]);
+      // // @ts-ignore
+      // console.warn('file found', req.files['file'][0]);
+      // console.warn('body found', JSON.stringify(req.body, null, 2));
       // Filter out ineligible uploads
       if (
-        (req.body.officialMap === 'true' && !req.body?.adminToken?.length) ||
-        (req.body.officialMap === 'true' &&
+        (req.body.official === 'true' && !req.body?.adminToken?.length) ||
+        (req.body.official === 'true' &&
           req.body.adminToken !== process.env.API_ADMIN_TOKEN)
       ) {
         await transaction.rollback();
         return genericAPIError(res, 422, `Missing: invalid admin token`);
       }
       if (req.body.mapToken?.length) {
-        const modelToDestroy = await MapModel.findOne({
+        const modelToOverwrite = await MapModel.findOne({
           where: {
             token: req.body.mapToken,
           },
         });
-        if (!modelToDestroy) {
+        if (!modelToOverwrite) {
           await transaction.rollback();
           return genericAPIError(res, 422, `Missing: invalid map token`);
         }
+        // @ToDo: stuffzsdser
       }
-      res.json('OK!').end();
+      const token = uuid();
+      try {
+        const files: { file: File[]; image: File[] } = req.files as any;
+        const paths = mapWrite(
+          files['file'][0] as File,
+          files['image'][0] as File,
+          token
+        );
+        try {
+          var insertedMap = await MapModel.create(
+            {
+              author: req.body.author,
+              name: req.body.name,
+              description: req.body.description,
+              players: req.body.players,
+              size: req.body.size,
+              token,
+              image: paths.imagePath,
+              file: paths.filePath,
+              version: req.body.version,
+            } as MapAttr,
+            { transaction }
+          );
+          await transaction.commit();
+          return res.json(insertedMap);
+        } catch (e) {
+          log.error('ERROR', e);
+          fs.rmdirSync(mapPath(token), { recursive: true });
+          await transaction.rollback();
+          return genericAPIError(res, 500, e.message);
+        }
+      } catch (e) {
+        log.error('ERROR', e);
+        await transaction.rollback();
+        return genericAPIError(res, 500, e.message);
+      }
     } catch (e) {
       log.error('ERROR', e);
       await transaction.rollback();
