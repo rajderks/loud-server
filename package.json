@@ -9,7 +9,8 @@
     "prod:serve": "NODE_ENV=production node dist/server.js",
     "start": "npm run build && npm run prod:serve",
     "dev": "set NODE_ENV=development && ts-node-dev src/server.ts",
-    "tslint": "tslint -c tslint.json -p tsconfig.json"
+    "tslint": "tslint -c tslint.json -p tsconfig.json",
+    "build:prod": "copy_to_server.bat"
   },
   "dependencies": {
     "@types/bluebird": "^3.5.32",
