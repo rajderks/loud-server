@@ -15,7 +15,7 @@ import path from 'path';
 import { File } from '../types';
 import { uuid } from 'uuidv4';
 import { path as rootPath } from 'app-root-path';
-import { title } from 'process';
+import { sync as rimrafsync } from 'rimraf';
 
 const MapRouter = express.Router();
 const upload = multer();
@@ -74,17 +74,8 @@ MapRouter.post(
   async (req, res) => {
     const transaction = await sequelize.transaction({ autocommit: false });
     try {
-      // @ts-ignore
-      // console.warn('image found', req.files['image'][0]);
-      // // @ts-ignore
-      // console.warn('file found', req.files['file'][0]);
-      // console.warn('body found', JSON.stringify(req.body, null, 2));
       // Filter out ineligible uploads
-      if (
-        (req.body.official === 'true' && !req.body?.adminToken?.length) ||
-        (req.body.official === 'true' &&
-          req.body.adminToken !== process.env.API_ADMIN_TOKEN)
-      ) {
+      if (req.body?.adminToken !== process.env.API_ADMIN_TOKEN) {
         await transaction.rollback();
         return genericAPIError(res, 422, `Missing: invalid admin token`);
       }
@@ -98,7 +89,42 @@ MapRouter.post(
           await transaction.rollback();
           return genericAPIError(res, 422, `Missing: invalid map token`);
         }
-        // @ToDo: stuffzsdser
+        const token = req.body.mapToken;
+        try {
+          rimrafsync(mapPath(token));
+          const files: { file: File[]; image: File[] } = req.files as any;
+          const paths = mapWrite(
+            files['file'][0] as File,
+            files['image'][0] as File,
+            token
+          );
+          try {
+            var insertedMap = await modelToOverwrite.update(
+              {
+                author: req.body.author,
+                name: req.body.name,
+                description: req.body.description,
+                players: req.body.players,
+                size: req.body.size,
+                token,
+                image: paths.imagePath,
+                file: paths.filePath,
+                version: req.body.version,
+              } as MapAttr,
+              { transaction }
+            );
+            await transaction.commit();
+            return res.json(insertedMap);
+          } catch (e) {
+            log.error('ERROR', e);
+            await transaction.rollback();
+            return genericAPIError(res, 500, e.message);
+          }
+        } catch (e) {
+          log.error('ERROR', e);
+          await transaction.rollback();
+          return genericAPIError(res, 500, e.message);
+        }
       }
       const token = uuid();
       try {
@@ -127,7 +153,7 @@ MapRouter.post(
           return res.json(insertedMap);
         } catch (e) {
           log.error('ERROR', e);
-          fs.rmdirSync(mapPath(token), { recursive: true });
+          rimrafsync(mapPath(token));
           await transaction.rollback();
           return genericAPIError(res, 500, e.message);
         }
