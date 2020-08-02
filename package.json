@@ -1,45 +1,45 @@
 {
-  "name": "heroku-typescript",
-  "scripts": {
-    "ts:watch": "tsc -w",
-    "ts:build": "tsc",
-    "serve": "nodemon dist/server.js",
-    "watch": "concurrently \"npm run ts:watch\" \"npm run serve\"",
-    "build": "npm run ts:build",
-    "prod:serve": "NODE_ENV=production node dist/server.js",
-    "start": "npm run build && npm run prod:serve",
-    "dev": "set NODE_ENV=development && ts-node-dev src/server.ts",
-    "tslint": "tslint -c tslint.json -p tsconfig.json",
-    "build:prod": "copy_to_server.bat"
-  },
-  "dependencies": {
-    "@types/app-root-path": "^1.2.4",
-    "@types/bluebird": "^3.5.32",
-    "@types/cors": "^2.8.6",
-    "@types/express": "^4.0.36",
-    "@types/multer": "^1.4.3",
-    "@types/node": "^12.12.47",
-    "@types/rimraf": "^3.0.0",
-    "@types/validator": "^13.0.0",
-    "@types/winston": "^2.3.4",
-    "app-root-path": "^3.0.0",
-    "body-parser": "^1.19.0",
-    "cors": "^2.8.5",
-    "dotenv": "^8.2.0",
-    "express": "^4.15.3",
-    "express-winston": "^4.0.3",
-    "multer": "^1.4.2",
-    "mysql2": "^2.1.0",
-    "rimraf": "^3.0.2",
-    "sequelize": "^5.21.12",
-    "typescript": "^3.9.5",
-    "uuidv4": "^6.2.0",
-    "winston": "^2.3.1"
-  },
-  "devDependencies": {
-    "concurrently": "^3.5.0",
-    "nodemon": "^1.11.0",
-    "ts-node-dev": "^1.0.0-pre.45",
-    "tslint": "^5.5.0"
-  }
+	"name": "loud-server",
+	"scripts": {
+		"ts:watch": "tsc -w",
+		"ts:build": "tsc",
+		"serve": "nodemon dist/server.js",
+		"watch": "concurrently \"npm run ts:watch\" \"npm run serve\"",
+		"build": "npm run ts:build",
+		"prod:serve": "NODE_ENV=production node dist/server.js",
+		"start": "npm run build && npm run prod:serve",
+		"dev": "set NODE_ENV=development && ts-node-dev src/server.ts",
+		"tslint": "tslint -c tslint.json -p tsconfig.json",
+		"build:prod": "copy_to_server.bat"
+	},
+	"dependencies": {
+		"@types/app-root-path": "^1.2.4",
+		"@types/bluebird": "^3.5.32",
+		"@types/cors": "^2.8.6",
+		"@types/express": "^4.0.36",
+		"@types/multer": "^1.4.3",
+		"@types/node": "^12.12.47",
+		"@types/rimraf": "^3.0.0",
+		"@types/validator": "^13.0.0",
+		"@types/winston": "^2.3.4",
+		"app-root-path": "^3.0.0",
+		"body-parser": "^1.19.0",
+		"cors": "^2.8.5",
+		"dotenv": "^8.2.0",
+		"express": "^4.15.3",
+		"express-winston": "^4.0.3",
+		"multer": "^1.4.2",
+		"mysql2": "^2.1.0",
+		"rimraf": "^3.0.2",
+		"sequelize": "^5.21.12",
+		"typescript": "^3.9.5",
+		"uuidv4": "^6.2.0",
+		"winston": "^2.3.1"
+	},
+	"devDependencies": {
+		"concurrently": "^3.5.0",
+		"nodemon": "^1.11.0",
+		"ts-node-dev": "^1.0.0-pre.45",
+		"tslint": "^5.5.0"
+	}
 }
