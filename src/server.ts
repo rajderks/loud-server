@@ -6,6 +6,7 @@ import log from './log';
 import Sequelize from 'sequelize';
 import sequelize from './sequelize';
 import MapRouter from './routes/mapRouter';
+import ReleaseRouter from './routes/releaseRouter';
 import AuthorizeDeleteMiddleware from './middlewares/authorizeDeleteMiddleware';
 
 const app = express();
@@ -20,6 +21,7 @@ const port = process.env.PORT;
 
 app.use(AuthorizeDeleteMiddleware);
 app.use('/maps', MapRouter);
+app.use('/release', ReleaseRouter);
 
 sequelize
   .authenticate()
