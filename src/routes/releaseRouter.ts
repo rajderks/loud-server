@@ -20,6 +20,31 @@ ReleaseRouter.get('/', function (_req, res) {
       res.set('Content-Type', 'text/plain');
       res.status(404).end('Not found');
     });
+    s.on('close', function () {
+      fs.stat('./downloads.txt', (fsErr) => {
+        if (fsErr) {
+          fs.writeFile('./downloads.txt', 1, (err) => {
+            if (err) {
+              log.warn("Can't write file " + err);
+              return;
+            }
+          });
+        } else {
+          fs.readFile('./downloads.txt', (errRead, data) => {
+            if (errRead) {
+              log.warn("Can't read downloads " + errRead);
+              return;
+            }
+            try {
+              const downloads = Number.parseInt(data.toString());
+              fs.writeFileSync('./downloads.txt', downloads + 1);
+            } catch (err) {
+              log.warn("Can't read downloads " + err);
+            }
+          });
+        }
+      });
+    });
   } catch (e) {
     log.error(e);
     res.set('Content-Type', 'text/plain');
