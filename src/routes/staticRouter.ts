@@ -49,8 +49,11 @@ StaticRouter.get('/:key', function (req, res) {
     }
     let result: any;
     if (key === 'downloads') {
-      const downloads = fs.readFileSync(path.join(rootPath, 'downloads.txt'));
+      const downloads = fs
+        .readFileSync(path.join(rootPath, 'downloads.txt'))
+        .toString();
       result = downloads;
+      res.set('Content-Type', 'text/plain');
     } else {
       if (!persistedStatics[key]) {
         throw new Error(`No value for key: ${key}`);
