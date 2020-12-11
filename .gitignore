@@ -28,3 +28,4 @@ yarn-error.log*
 *.exe
 *.txt
 */**/quokka-*
+quokka-*
