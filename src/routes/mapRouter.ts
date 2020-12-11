@@ -7,6 +7,7 @@ import {
   mapPath,
   mapWrite,
   mapDelete,
+  mapIdentifierFromFilePath,
 } from '../utils';
 import sequelize from '../sequelize';
 import log from '../log';
@@ -17,6 +18,7 @@ import { File } from '../types';
 import { uuid } from 'uuidv4';
 import { path as rootPath } from 'app-root-path';
 import { sync as rimrafsync } from 'rimraf';
+import { ValidationError } from 'sequelize';
 
 const MapRouter = express.Router();
 const upload = multer();
@@ -26,15 +28,31 @@ MapRouter.use(bodyParser.json());
 // for parsing application/xwww-
 MapRouter.use(bodyParser.urlencoded({ extended: true }));
 
-MapRouter.get('/', (_req, res) => {
-  MapModel.findAll().then((maps) => {
-    res.json(
-      maps.map((map) => {
-        const { token, ...rest } = map.toJSON() as MapAttr;
-        return rest;
-      })
-    );
-  });
+MapRouter.get('/:token?', async (req, res) => {
+  const token = req.params.token;
+  if (typeof token === 'string' && !token.includes('-')) {
+    return genericAPIError(res, 422, `Invalid token`);
+  }
+  if (req.params.token) {
+    if (req.query.token !== process.env.API_ADMIN_TOKEN) {
+      res.sendStatus(403);
+      return;
+    }
+    MapModel.findOne({
+      where: {
+        token,
+      },
+    }).then((map) => res.json(map));
+  } else {
+    MapModel.findAll().then((maps) => {
+      res.json(
+        maps.map((map) => {
+          const { token, ...rest } = map.toJSON() as MapAttr;
+          return rest;
+        })
+      );
+    });
+  }
 });
 
 var dir = path.join(rootPath, 'maps');
@@ -114,6 +132,7 @@ MapRouter.post(
                 image: paths.imagePath,
                 file: paths.filePath,
                 version: req.body.version,
+                identifier: mapIdentifierFromFilePath(paths.filePath),
               } as MapAttr,
               { transaction }
             );
@@ -150,26 +169,38 @@ MapRouter.post(
               image: paths.imagePath,
               file: paths.filePath,
               version: req.body.version,
+              identifier: mapIdentifierFromFilePath(paths.filePath),
             } as MapAttr,
             { transaction }
           );
           await transaction.commit();
           return res.json(insertedMap);
         } catch (e) {
-          log.error('ERROR', e);
+          log.error('ERROR', { message: e.message, errors: e.errors });
           rimrafsync(mapPath(token));
           await transaction.rollback();
-          return genericAPIError(res, 500, e.message);
+          return genericAPIError(res, 400, {
+            message: e.message,
+            errors: e.errors,
+          });
         }
       } catch (e) {
-        log.error('ERROR', e);
+        log.error('ERROR', { message: e.message, errors: e.errors });
+        rimrafsync(mapPath(token));
         await transaction.rollback();
-        return genericAPIError(res, 500, e.message);
+        return genericAPIError(res, 400, {
+          message: e.message,
+          errors: e.errors,
+        });
       }
     } catch (e) {
-      log.error('ERROR', e);
+      console.error(e.message);
+      log.error('ERROR', e.message);
       await transaction.rollback();
-      return genericAPIError(res, 500, e.message);
+      return genericAPIError(res, 400, {
+        message: e.message,
+        errors: e.errors,
+      });
     }
   }
 );
@@ -203,18 +234,26 @@ MapRouter.put('/', async (req, res) => {
     await transaction.commit();
     return res.json(insertedMaps);
   } catch (e) {
-    log.error('ERROR', e);
-    await transaction.rollback();
-    return genericAPIError(res, 500, e.message);
+    if (e instanceof ValidationError) {
+      console.error(e.message);
+      log.error('ERROR', e.message);
+      await transaction.rollback();
+      return genericAPIError(
+        res,
+        400,
+        JSON.stringify({ message: e.message, errors: e.errors })
+      );
+    } else {
+      console.error(e.message);
+      log.error('ERROR', e.message);
+      await transaction.rollback();
+      return genericAPIError(res, 500, e.message);
+    }
   }
 });
 
 MapRouter.delete('/:token', async (req, res) => {
   const token = req.params.token;
-
-  if (typeof token !== 'string' || !token.includes('-')) {
-    return genericAPIError(res, 422, `Missing token`);
-  }
 
   const transaction = await sequelize.transaction({ autocommit: false });
   try {
@@ -234,7 +273,7 @@ MapRouter.delete('/:token', async (req, res) => {
     mapDelete(token);
     return res.sendStatus(200);
   } catch (e) {
-    log.error('ERROR', e);
+    log.error('ERROR', e.message);
     await transaction.rollback();
     return genericAPIError(res, 500, e.message);
   }

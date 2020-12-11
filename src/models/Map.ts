@@ -1,6 +1,10 @@
 import Sequelize, { Model, BuildOptions } from 'sequelize';
 import sequelize from '../sequelize';
 import log from '../log';
+import { mapIdentifierFromFilePath } from '../utils';
+import { map } from 'bluebird';
+
+const MAP_IDENTIFIER_DEFAULT_VALUE = '!!FIX!!';
 
 export interface MapAttr {
   id?: number;
@@ -15,6 +19,7 @@ export interface MapAttr {
   version: string;
   views: number;
   token: string;
+  identifier: string;
 }
 
 class MapModel extends Model<MapAttr> {
@@ -39,6 +44,8 @@ class MapModel extends Model<MapAttr> {
   public version!: string;
   public views!: number;
   public token!: string;
+  // Map directory, same zip file name without scd
+  public identifier!: string;
 
   // timestamps!
   public readonly createdAt!: Date;
@@ -101,13 +108,55 @@ MapModel.init(
       type: Sequelize.STRING,
       allowNull: false,
     },
+    identifier: {
+      type: Sequelize.STRING,
+      allowNull: false,
+      defaultValue: MAP_IDENTIFIER_DEFAULT_VALUE,
+    },
   },
-  { sequelize, tableName: 'maps', paranoid: true }
+  {
+    sequelize,
+    tableName: 'maps',
+    paranoid: true,
+    indexes: [
+      { unique: true, fields: ['token'] },
+      // { unique: true, fields: ['identifier'] },
+    ],
+  }
 );
 
 MapModel.sync({ alter: true }).then(
-  () => {
+  async () => {
     log.info('Map table created');
+    MapModel.findAll({
+      where: {
+        identifier: MAP_IDENTIFIER_DEFAULT_VALUE,
+      },
+    }).then(async (maps) => {
+      const transaction = await sequelize.transaction({ autocommit: false });
+      // Manual database migration
+      // ## Fix 'identifier' column for earlier uploaded maps
+      try {
+        await (async () => {
+          for (let map of maps) {
+            const mapFile = map.get('file');
+            if (!mapFile) {
+              console.error('Could not fix map', map.toJSON());
+              log.error('Could not fix map', map.toJSON());
+              return;
+            }
+            const identifier = mapIdentifierFromFilePath(mapFile);
+            map.identifier = identifier;
+            await map.save({ transaction });
+          }
+        })();
+        await transaction.commit();
+      } catch (e) {
+        await transaction.rollback();
+        log.error(e);
+        console.error(e);
+      }
+    });
   },
   (err) => {
     log.error('Map table not created', err);

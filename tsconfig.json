@@ -15,6 +15,6 @@
       "*": ["node_modules/*", "src/types/*"]
     }
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "quokka-scratch.ts"],
   "exclude": ["node_modules"]
 }

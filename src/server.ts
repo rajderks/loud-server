@@ -10,6 +10,7 @@ import sequelize from './sequelize';
 import MapRouter from './routes/mapRouter';
 import ReleaseRouter from './routes/releaseRouter';
 import AuthorizeDeleteMiddleware from './middlewares/authorizeDeleteMiddleware';
+import AuthorizePutMiddleware from './middlewares/authorizePutMiddleware';
 import { path as rootPath } from 'app-root-path';
 import StaticRouter from './routes/staticRouter';
 
@@ -25,6 +26,7 @@ const port = process.env.PORT;
 const port2 = process.env.PORT2;
 
 app.use(AuthorizeDeleteMiddleware);
+app.use(AuthorizePutMiddleware);
 app.use('/maps', MapRouter);
 app.use('/release', ReleaseRouter);
 app.use('/static', StaticRouter);

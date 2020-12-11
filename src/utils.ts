@@ -4,6 +4,7 @@ import { sync as rimraf } from 'rimraf';
 import { path as rootPath } from 'app-root-path';
 import { File } from './types';
 import { Response } from 'express';
+import { off } from 'process';
 
 /**
  * Finds all missing keys in provided object
@@ -26,7 +27,11 @@ const objectReduceMissingKeys = <
   return missingRequirements;
 };
 
-const genericAPIError = (res: Response, status: number, message: string) => {
+const genericAPIError = (
+  res: Response,
+  status: number,
+  message: string | Record<string, any>
+) => {
   res.status(status).json({
     status,
     message,
@@ -39,6 +44,13 @@ const mapPath = (token: string) =>
     : path.normalize(
         path.resolve(`${rootPath}/`, process.env.MAP_ROOT_DEV, token)
       );
+
+const mapIdentifierFromFilePath = (filePath: string) => {
+  if (!filePath.endsWith('.scd')) {
+    throw new Error(`filePath is not .scd ${filePath}`);
+  }
+  return path.basename(filePath).substr(0, path.basename(filePath).length - 4);
+};
 
 const mapWrite = (file: File, image: File, token: string) => {
   const filePath = path.normalize(path.join(mapPath(token), file.originalname));
@@ -65,4 +77,5 @@ export {
   mapPath,
   mapWrite,
   mapDelete,
+  mapIdentifierFromFilePath,
 };
