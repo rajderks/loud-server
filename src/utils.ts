@@ -1,5 +1,6 @@
 import path from 'path';
 import fs from 'fs';
+import { sync as rimraf } from 'rimraf';
 import { path as rootPath } from 'app-root-path';
 import { File } from './types';
 import { Response } from 'express';
@@ -53,4 +54,15 @@ const mapWrite = (file: File, image: File, token: string) => {
   };
 };
 
-export { genericAPIError, objectReduceMissingKeys, mapPath, mapWrite };
+const mapDelete = (token: string) => {
+  const filePath = mapPath(token);
+  rimraf(filePath);
+};
+
+export {
+  genericAPIError,
+  objectReduceMissingKeys,
+  mapPath,
+  mapWrite,
+  mapDelete,
+};

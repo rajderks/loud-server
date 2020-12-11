@@ -6,6 +6,7 @@ import {
   genericAPIError,
   mapPath,
   mapWrite,
+  mapDelete,
 } from '../utils';
 import sequelize from '../sequelize';
 import log from '../log';
@@ -75,8 +76,10 @@ MapRouter.post(
     const transaction = await sequelize.transaction({ autocommit: false });
     try {
       // Filter out ineligible uploads
+      log.warn(req.body);
       if (req.body?.adminToken !== process.env.API_ADMIN_TOKEN) {
         await transaction.rollback();
+        log.error(`Missing: invalid admin token`);
         return genericAPIError(res, 422, `Missing: invalid admin token`);
       }
       if (req.body.mapToken?.length) {
@@ -87,6 +90,7 @@ MapRouter.post(
         });
         if (!modelToOverwrite) {
           await transaction.rollback();
+          log.error(`Missing: invalid map token`);
           return genericAPIError(res, 422, `Missing: invalid map token`);
         }
         const token = req.body.mapToken;
@@ -170,7 +174,7 @@ MapRouter.post(
   }
 );
 
-MapRouter.put('/', async (req, res, next) => {
+MapRouter.put('/', async (req, res) => {
   const bodyParams: Partial<MapAttr> = req.body;
   const paramsArr: Partial<MapAttr>[] = Array.isArray(bodyParams)
     ? bodyParams
@@ -205,22 +209,35 @@ MapRouter.put('/', async (req, res, next) => {
   }
 });
 
-MapRouter.delete('/:id', async (req, res) => {
-  const id = req.params.id;
+MapRouter.delete('/:token', async (req, res) => {
+  const token = req.params.token;
 
-  if (typeof id !== 'string') {
-    return genericAPIError(res, 422, `Missing id`);
+  if (typeof token !== 'string' || !token.includes('-')) {
+    return genericAPIError(res, 422, `Missing token`);
   }
-  const modelToDestroy = await MapModel.findByPk(id);
-  if (!modelToDestroy || modelToDestroy.deletedAt) {
-    return genericAPIError(
-      res,
-      422,
-      `Entity with ${id} not found or is already deleted`
-    );
+
+  const transaction = await sequelize.transaction({ autocommit: false });
+  try {
+    const modelToDestroy = await MapModel.findOne({
+      where: {
+        token: token,
+      },
+    });
+    if (!modelToDestroy || modelToDestroy.deletedAt) {
+      return genericAPIError(
+        res,
+        422,
+        `Entity with ${token} not found or is already deleted`
+      );
+    }
+    await MapModel.destroy({ where: { token }, transaction });
+    mapDelete(token);
+    return res.sendStatus(200);
+  } catch (e) {
+    log.error('ERROR', e);
+    await transaction.rollback();
+    return genericAPIError(res, 500, e.message);
   }
-  await MapModel.destroy({ where: { id } });
-  return res.sendStatus(200);
 });
 
 export default MapRouter;
