@@ -62,20 +62,44 @@ var mime = {
   scd: 'application/octet-stream',
 };
 
-MapRouter.get('/**/*', function (req, res) {
+MapRouter.get('/:token/*', function (req, res) {
   var file = decodeURIComponent(
     path.join(dir, req.path.replace(/\/$/, '/index.html'))
   );
-  console.warn('TRYING FILE', file);
+  const token = req.params.token;
   if (file.indexOf(dir + path.sep) !== 0) {
     return res.status(403).end('Forbidden');
   }
+  const pathExt = path.extname(file).slice(1);
   //@ts-ignore
   var type = mime[path.extname(file).slice(1)] || 'text/plain';
   var s = fs.createReadStream(file);
   s.on('open', function () {
+    console.warn('Start downloading file', req.params.token, pathExt);
     res.set('Content-Type', type);
     s.pipe(res);
+  });
+  s.on('close', async () => {
+    if (pathExt.toLowerCase() === 'scd') {
+      const transaction = await sequelize.transaction({ autocommit: false });
+      try {
+        const mapModel = await MapModel.findOne({
+          where: {
+            token,
+          },
+          transaction,
+        });
+        if (!mapModel) {
+          throw new Error(`Could not find Map for token: ${token}`);
+        }
+        mapModel.downloads += 1;
+        await mapModel.save({ transaction });
+        await transaction.commit();
+      } catch (e) {
+        console.error(e);
+        transaction.rollback();
+      }
+    }
   });
   s.on('error', function (e) {
     log.error(e);

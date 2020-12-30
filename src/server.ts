@@ -2,6 +2,7 @@ require('dotenv').config();
 
 import express from 'express';
 import fs from 'fs';
+import path from 'path';
 import https from 'https';
 import cors from 'cors';
 import log from './log';
@@ -39,14 +40,17 @@ sequelize
     if (process.env.NODE_ENV === 'production') {
       // Certificate
       const privateKey = fs.readFileSync(
-        `${rootPath}/certs/privkey1.pem`,
+        '/etc/letsencrypt/live/theloudproject.org/privkey.pem',
         'utf8'
       );
       const certificate = fs.readFileSync(
-        `${rootPath}/certs/cert1.pem`,
+        '/etc/letsencrypt/live/theloudproject.org/cert.pem',
         'utf8'
       );
-      const ca = fs.readFileSync(`${rootPath}/certs/chain1.pem`, 'utf8');
+      const ca = fs.readFileSync(
+        '/etc/letsencrypt/live/theloudproject.org/chain.pem',
+        'utf8'
+      );
       const credentials = {
         key: privateKey,
         cert: certificate,
