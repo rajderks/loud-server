@@ -77,12 +77,16 @@ MapRouter.get('/:token/*', function (req, res) {
   //@ts-ignore
   var type = mime[path.extname(file).slice(1)] || 'text/plain';
   console.warn('file ? ', path.relative(dir, file));
-  res.download('maps\\' + path.relative(dir, file), token, (err) => {
-    if (err) {
-      console.error('error', err);
-      return genericAPIError(res, 500, err.message);
+  res.download(
+    path.normalize(`maps${path.sep}` + path.relative(dir, file)),
+    token,
+    (err) => {
+      if (err) {
+        console.error('error', err);
+        return genericAPIError(res, 500, err.message);
+      }
     }
-  });
+  );
 });
 
 MapRouter.post(
