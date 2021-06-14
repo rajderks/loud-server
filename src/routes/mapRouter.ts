@@ -1,5 +1,6 @@
 import express from 'express';
 import bodyParser from 'body-parser';
+import MapSyncRouter from './mapSyncRouter';
 import MapModel, { MapAttr } from '../models/Map';
 import {
   objectReduceMissingKeys,
@@ -27,6 +28,8 @@ const upload = multer();
 MapRouter.use(bodyParser.json());
 // for parsing application/xwww-
 MapRouter.use(bodyParser.urlencoded({ extended: true }));
+
+MapRouter.use('/sync', MapSyncRouter);
 
 MapRouter.get('/:token?', async (req, res) => {
   const token = req.params.token;
@@ -73,38 +76,12 @@ MapRouter.get('/:token/*', function (req, res) {
   const pathExt = path.extname(file).slice(1);
   //@ts-ignore
   var type = mime[path.extname(file).slice(1)] || 'text/plain';
-  var s = fs.createReadStream(file);
-  s.on('open', function () {
-    console.warn('Start downloading file', req.params.token, pathExt);
-    res.set('Content-Type', type);
-    s.pipe(res);
-  });
-  s.on('close', async () => {
-    if (pathExt.toLowerCase() === 'scd') {
-      const transaction = await sequelize.transaction({ autocommit: false });
-      try {
-        const mapModel = await MapModel.findOne({
-          where: {
-            token,
-          },
-          transaction,
-        });
-        if (!mapModel) {
-          throw new Error(`Could not find Map for token: ${token}`);
-        }
-        mapModel.downloads += 1;
-        await mapModel.save({ transaction });
-        await transaction.commit();
-      } catch (e) {
-        console.error(e);
-        transaction.rollback();
-      }
+  console.warn('file ? ', path.relative(dir, file));
+  res.download('maps\\' + path.relative(dir, file), token, (err) => {
+    if (err) {
+      console.error('error', err);
+      return genericAPIError(res, 500, err.message);
     }
-  });
-  s.on('error', function (e) {
-    log.error(e);
-    res.set('Content-Type', 'text/plain');
-    res.status(404).end('Not found');
   });
 });
 
