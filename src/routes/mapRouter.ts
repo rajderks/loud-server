@@ -66,27 +66,19 @@ var mime = {
 };
 
 MapRouter.get('/:token/*', function (req, res) {
-  var file = decodeURIComponent(
-    path.join(dir, req.path.replace(/\/$/, '/index.html'))
-  );
-  const token = req.params.token;
-  if (file.indexOf(dir + path.sep) !== 0) {
-    return res.status(403).end('Forbidden');
-  }
-  const pathExt = path.extname(file).slice(1);
-  //@ts-ignore
-  var type = mime[path.extname(file).slice(1)] || 'text/plain';
-  console.warn('file ? ', path.relative(dir, file));
-  res.download(
-    path.normalize(`maps${path.sep}` + path.relative(dir, file)),
-    token,
-    (err) => {
-      if (err) {
-        console.error('error', err);
-        return genericAPIError(res, 500, err.message);
-      }
+  try {
+    var file = decodeURIComponent(
+      path.join(dir, req.path.replace(/\/$/, '/index.html'))
+    );
+    const token = req.params.token;
+    if (file.indexOf(dir + path.sep) !== 0) {
+      console.warn('I ERROR HERE 1');
+      return res.status(403).end('Forbidden');
     }
-  );
+    res.download(path.normalize(`maps${path.sep}` + path.relative(dir, file)));
+  } catch (err) {
+    return genericAPIError(res, 500, err.message);
+  }
 });
 
 MapRouter.post(
