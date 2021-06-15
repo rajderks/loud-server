@@ -70,9 +70,8 @@ MapRouter.get('/:token/*', function (req, res) {
     var file = decodeURIComponent(
       path.join(dir, req.path.replace(/\/$/, '/index.html'))
     );
-    const token = req.params.token;
+    // const token = req.params.token;
     if (file.indexOf(dir + path.sep) !== 0) {
-      console.warn('I ERROR HERE 1');
       return res.status(403).end('Forbidden');
     }
     res.download(path.normalize(`maps${path.sep}` + path.relative(dir, file)));
