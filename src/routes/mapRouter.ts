@@ -65,7 +65,7 @@ var mime = {
   scd: 'application/octet-stream',
 };
 
-MapRouter.get('/:token/*', function (req, res) {
+MapRouter.get('/:token/*', async function (req, res) {
   try {
     var file = decodeURIComponent(
       path.join(dir, req.path.replace(/\/$/, '/index.html'))
@@ -74,7 +74,47 @@ MapRouter.get('/:token/*', function (req, res) {
     if (file.indexOf(dir + path.sep) !== 0) {
       return res.status(403).end('Forbidden');
     }
-    res.download(path.normalize(`maps${path.sep}` + path.relative(dir, file)));
+
+    const token = req.params.token;
+    const pathExt = path.extname(file).slice(1);
+
+    // Stream image
+    if ((pathExt?.toLowerCase() ?? '') !== 'scd') {
+      var type =
+        mime[(path.extname(file).slice(1) ?? 'gif') as keyof typeof mime] ||
+        'text/plain';
+      var s = fs.createReadStream(file);
+      s.on('open', function () {
+        console.warn('Start downloading file', req.params.token, pathExt);
+        res.set('Content-Type', type);
+        s.pipe(res);
+      });
+    } else {
+      // Download map
+      res.download(
+        path.normalize(`maps${path.sep}` + path.relative(dir, file))
+      );
+
+      // Increment download number
+      const transaction = await sequelize.transaction({ autocommit: false });
+      try {
+        const mapModel = await MapModel.findOne({
+          where: {
+            token,
+          },
+          transaction,
+        });
+        if (!mapModel) {
+          throw new Error(`Could not find Map for token: ${token}`);
+        }
+        mapModel.downloads += 1;
+        await mapModel.save({ transaction });
+        await transaction.commit();
+      } catch (e) {
+        console.error(e);
+        transaction.rollback();
+      }
+    }
   } catch (err) {
     return genericAPIError(res, 500, err.message);
   }
