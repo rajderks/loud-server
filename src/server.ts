@@ -32,6 +32,26 @@ app.use('/maps', MapRouter);
 app.use('/release', ReleaseRouter);
 app.use('/static', StaticRouter);
 
+//add some controlled crashing and see if it helps.
+//Note: this will not save us from async exceptions happening
+//inside expressJS apparently, e.g. with readStream, so
+//we have to handle those separately.  Hopefully this
+//serves as a catch-all to just kill the process and exit.
+//Assuming we have supervisor or some other system process manager
+//watching, we can restart the process automatically if it goes down.
+
+//https://blog.heroku.com/best-practices-nodejs-errors
+process.on('uncaughtException', err => {
+  console.log(`ERROR! Uncaught Exception: ${err.message}`)
+    process.exit(1)
+    })
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.log('Unhandled Rejection at:', promise, 'reason:', reason);
+    // Application specific logging, throwing an error, or other logic here
+
+});
+
 sequelize
   .authenticate()
   .then(() => {
