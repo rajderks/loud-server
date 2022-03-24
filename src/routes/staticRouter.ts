@@ -13,7 +13,7 @@ const StaticRouter = express.Router();
 StaticRouter.use(bodyParser.text());
 StaticRouter.use(bodyParser.json({ type: 'application/json' }));
 
-const whitelistedStatics = <const>['discord', 'downloads'];
+const whitelistedStatics = <const>['discord', 'downloads', 'paypal'];
 type WhitelistedStatics = typeof whitelistedStatics[number];
 
 let persistedStatics: { [K in WhitelistedStatics]?: any };

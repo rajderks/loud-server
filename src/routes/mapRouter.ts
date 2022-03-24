@@ -61,6 +61,7 @@ MapRouter.get('/:token?', async (req, res) => {
 var dir = path.join(rootPath, 'maps');
 
 var mime = {
+  jpg: 'image/jpg',
   gif: 'image/*',
   scd: 'application/octet-stream',
 };
