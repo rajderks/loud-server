@@ -66,7 +66,9 @@ var mime = {
   scd: 'application/octet-stream',
 };
 
-MapRouter.get('/:token/*', async function (req, res) {
+//added next arg to enable err handling within expressJS on file
+//not found async unhandled exceptions.
+MapRouter.get('/:token/*', async function (req, res, next) {
   try {
     var file = decodeURIComponent(
       path.join(dir, req.path.replace(/\/$/, '/index.html'))
@@ -78,13 +80,20 @@ MapRouter.get('/:token/*', async function (req, res) {
 
     const token = req.params.token;
     const pathExt = path.extname(file).slice(1);
-
     // Stream image
     if ((pathExt?.toLowerCase() ?? '') !== 'scd') {
       var type =
         mime[(path.extname(file).slice(1) ?? 'gif') as keyof typeof mime] ||
-        'text/plain';
+            'text/plain';
       var s = fs.createReadStream(file);
+      //we now catch file not found and actually invoke next
+      //per expressJS docs https://expressjs.com/en/guide/error-handling.html
+      //this enables the server process to return its error response instead of
+      //hanging indefinitely and ignoring requests (pending manual restart).
+      s.on('error', err => {
+          console.error('file encountered an error:', err);
+          next(err)
+        });
       s.on('open', function () {
         console.warn('Start downloading file', req.params.token, pathExt);
         res.set('Content-Type', type);
